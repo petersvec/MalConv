@@ -120,8 +120,9 @@ def process(data):
             samples.append(f.read())
 
     samples = [[byte for byte in doc] for doc in samples]
+    original_lengths = [len(doc) for doc in samples]
 
-    return input_padding(samples)
+    return input_padding(samples), original_lengths
 
 '''
     Continuously generates batches of training/testing data
@@ -148,12 +149,12 @@ def training(model):
 
     model.fit_generator(
         generator = generate_batch(training_data, training_labels),
-        steps_per_epoch = len(training_data) // batch_size + 1,
+        steps_per_epoch = (len(training_data) // batch_size) + 1,
         epochs = epochs,
         verbose = 2,
         callbacks = [early_stopping, model_checkpoint],
         validation_data = generate_batch(testing_data, testing_labels),
-        validation_steps = len(testing_data) // batch_size + 1)
+        validation_steps = (len(testing_data) // batch_size) + 1)
 
 
 if __name__ == '__main__':
