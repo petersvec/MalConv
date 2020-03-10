@@ -1,0 +1,8 @@
+# path to file with following format:
+#	path_to_executable, malicious_or_benign_label
+data_path: 'labels.csv'
+
+batch_size: 25
+epochs: 10
+max_length: 2000000
+test_ratio: 0.1
