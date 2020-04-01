@@ -2,6 +2,7 @@ from keras.models import Model
 from keras.layers import Dense, Embedding, Conv1D, multiply, GlobalMaxPool1D, Input, Activation
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.preprocessing.sequence import pad_sequences
+from sklearn.metrics import confusion_matrix
 
 import os
 import argparse
@@ -131,9 +132,11 @@ def process(data):
 '''
     Continuously generates batches of training/testing data
 '''
-def generate_batch(data, labels):
+def generate_batch(data, labels, shuffle):
     idx = numpy.arange(len(data))
-    numpy.random.shuffle(idx)
+
+    if shuffle:
+        numpy.random.shuffle(idx)
 
     batches = [idx[range(batch_size * i, min(len(data), batch_size * (i + 1)))] for i in range(len(data) // batch_size + 1)]
 
@@ -152,14 +155,19 @@ def training(model):
     model_checkpoint = ModelCheckpoint(filepath = 'malconv.h5', monitor = 'val_acc', save_best_only = True, save_weights_only = False)
 
     model.fit_generator(
-        generator = generate_batch(training_data, training_labels),
+        generator = generate_batch(training_data, training_labels, shuffle = True),
         steps_per_epoch = (len(training_data) // batch_size) + 1,
         epochs = epochs,
         verbose = 2,
         callbacks = [early_stopping, model_checkpoint],
-        validation_data = generate_batch(testing_data, testing_labels),
+        validation_data = generate_batch(testing_data, testing_labels, shuffle = True),
         validation_steps = (len(testing_data) // batch_size) + 1)
 
+    predictions = model.predict_generator(generate_batch(testing_data, testing_labels, False), (len(testing_data) // batch_size) + 1)
+    predictions = numpy.argmax(predictions, axis = 1)
+
+    print("Confusion matrix:")
+    print(confusion_matrix(testing_labels, predictions))
 
 if __name__ == '__main__':
     args = parser.parse_args()
