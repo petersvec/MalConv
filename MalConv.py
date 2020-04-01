@@ -9,6 +9,8 @@ import yaml
 import pandas
 import random
 import numpy
+import tensorflow
+import warnings
 
 training_data = []
 training_labels = []
@@ -18,6 +20,8 @@ testing_labels = []
 batch_size = 64
 epochs = 10
 max_length = 2000000
+
+warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description = 'MalConv deep neural network')
 parser.add_argument('--train', action = 'store_true')
@@ -38,7 +42,7 @@ def create_model(max_input_length = 2000000):
     activation_2 = Activation('relu', name = 'relu')(mul)
     pooling = GlobalMaxPool1D()(activation_2)
     dense = Dense(64)(pooling)
-    output = Dense(1, activation = 'sigmoid')(dense)
+    output = Dense(1, activation = 'softmax')(dense)
 
     return Model(input, output)
 
