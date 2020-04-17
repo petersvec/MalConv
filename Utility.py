@@ -1,6 +1,8 @@
 import os
 import argparse
 import pefile
+import peutils
+import PackerDetection
 
 parser = argparse.ArgumentParser(description = "Utility for malware detection system dataset creation")
 parser.add_argument("--benign", action = 'store_true')
@@ -37,9 +39,10 @@ def benign_creation(path):
     for dirpath, dirs, files in os.walk(path):
         for filename in files:
             if filename.endswith(".exe") or filename.endswith(".dll"):
-                fname = os.path.join(dirpath, filename);
+                fname = os.path.join(dirpath, filename)
                 
                 if check_pe(fname):
+                    print("Found: " + fname)
                     paths.append(fname)
 
     with open("benign_labels.csv", 'w') as f:
@@ -49,9 +52,23 @@ def benign_creation(path):
 '''
     Creates csv file with labels + checks for correctnes of the malware sample (x86, unpacked)
     path -> location of executables
+    signatures -> PEID signatres database
 '''
-def malware_creation(path):
-    pass
+def malware_creation(path, signatures):
+    paths = []
+
+    for dirpath, dirs, files in os.walk(path):
+        for filename in files:
+            fname = os.path.join(dirpath, filename)
+
+            if check_pe(fname) and PackerDetection.check(fname, signatures) == False:
+                print("Correct sample: " + fname)
+                paths.append(fname)
+
+    with open("malware_labels.csv", 'w') as f:
+        for file in paths:
+            f.write(file + ', 0\n')
+
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -60,4 +77,5 @@ if __name__ == '__main__':
         benign_creation(args.path)
 
     if args.malware:
-        malware_creation(args.path)
+        signatures = peutils.SignatureDatabase("packers.txt")
+        malware_creation(args.path, signatures)
