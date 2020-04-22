@@ -3,6 +3,7 @@ from keras.layers import Dense, Embedding, Conv1D, multiply, GlobalMaxPool1D, In
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.preprocessing.sequence import pad_sequences
 from sklearn.metrics import confusion_matrix
+from keras.models import load_model
 
 import os
 import argparse
@@ -26,6 +27,9 @@ warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description = 'MalConv deep neural network')
 parser.add_argument('--train', action = 'store_true')
+parser.add_argument('--predict', action = 'store_true')
+parser.add_argument('--model_path', type = str, default = 'malconv.h5')
+parser.add_argument('--prediction', type = str, default = 'predictions.csv')
 
 '''
     Creates MalConv model
@@ -43,7 +47,7 @@ def create_model(max_input_length = 2000000):
     activation_2 = Activation('relu', name = 'relu')(mul)
     pooling = GlobalMaxPool1D()(activation_2)
     dense = Dense(64)(pooling)
-    output = Dense(1, activation = 'softmax')(dense)
+    output = Dense(1, activation = 'sigmoid')(dense)
 
     return Model(input, output)
 
@@ -147,6 +151,29 @@ def generate_batch(data, labels, shuffle):
             yield (x, y)
 
 '''
+    Predicts malicious/benign labels
+    model_path -> path to trained model
+    predictions_path -> path to csv file with executable paths
+'''
+def predict(model_path, predictions_path):
+    model = load_model(model_path)
+    df = pandas.read_csv(predictions_path, header = None)
+    fn_list = df[0].values
+    label = numpy.zeros((fn_list.shape))
+
+    predictions = model.predict_generator(generate_batch(fn_list, label, False), (len(fn_list) // batch_size) + 1)
+    final_classes = []
+
+    for p in predictions:
+        if p >= 0.5:
+            final_classes.append(1)
+        else:
+            final_classes.append(0)
+
+    sr = (final_classes.count(1) * 100 / len(final_classes))
+    print("Benign: " + str(final_classes.count(1)) + " Success rate: " + str(sr) + "%")
+
+'''
     Trains the model
     model -> model to train
 '''
@@ -180,3 +207,6 @@ if __name__ == '__main__':
         model = create_model(max_length)
         model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
         training(model)
+
+    if args.predict:
+        predict(args.model_path, args.prediction)
