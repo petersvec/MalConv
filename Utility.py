@@ -8,6 +8,10 @@ parser = argparse.ArgumentParser(description = "Utility for malware detection sy
 parser.add_argument("--benign", action = 'store_true')
 parser.add_argument("--malware", action = 'store_true')
 parser.add_argument("--path", type = str, default = "C:\\")
+parser.add_argument("--random_append", action = 'store_true')
+parser.add_argument("--benign_append", action = 'store_true')
+parser.add_argument("--input", type = str)
+parser.add_argument("--size", type = int, default = 500)
 
 '''
     Checks if file is in correct format(PE) and architecture(x86)
@@ -52,7 +56,7 @@ def benign_creation(path):
 '''
     Creates csv file with labels + checks for correctnes of the malware sample (x86, unpacked)
     path -> location of executables
-    signatures -> PEID signatres database
+    signatures -> PEID signatures database
 '''
 def malware_creation(path, signatures):
     paths = []
@@ -69,6 +73,40 @@ def malware_creation(path, signatures):
         for file in paths:
             f.write(file + ', 0\n')
 
+'''
+    Performs random append attack
+    path -> path to executable file
+    size -> size of appended bytes
+'''
+def random_append(path, size):
+    random_data = os.urandom(size)
+
+    with open(path, 'rb') as input_file:
+        data = input_file.read()
+        
+        with open(os.path.splitext(path)[0] + "_" + str(size) + "_random.exe", 'wb') as output_file:
+            output_file.write(data)
+            output_file.write(random_data)
+
+
+'''
+    Performs benign append attack
+    path -> path to executable file
+    size -> size of benign bytes
+'''
+def benign_append(path, size):
+    benign_path = ""
+
+    with open(benign_path, 'rb') as benign_file:
+        benign_data = benign_file.read()
+
+    with open(path, 'rb') as input_file:
+        data = input_file.read()
+        
+        with open(os.path.splitext(path)[0] + "_" + str(size) + "_benign.exe", 'wb') as output_file:
+            output_file.write(data)
+            output_file.write(benign_data[0:size])
+
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -79,3 +117,9 @@ if __name__ == '__main__':
     if args.malware:
         signatures = peutils.SignatureDatabase("packers.txt")
         malware_creation(args.path, signatures)
+
+    if args.random_append:
+        random_append(args.input, args.size)
+
+    if args.benign_append:
+        benign_append(args.input, args.size)
