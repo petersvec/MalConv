@@ -3,10 +3,12 @@ import argparse
 import pefile
 import peutils
 import PackerDetection
+import shutil
 
 parser = argparse.ArgumentParser(description = "Utility for malware detection system dataset creation")
 parser.add_argument("--benign", action = 'store_true')
 parser.add_argument("--malware", action = 'store_true')
+parser.add_argument("--copy_files", action = 'store_true')
 parser.add_argument("--path", type = str, default = "C:\\")
 parser.add_argument("--random_append", action = 'store_true')
 parser.add_argument("--benign_append", action = 'store_true')
@@ -36,9 +38,15 @@ def check_pe(path):
 '''
     Creates csv file with labels + checks for correctness of PE file (if it is an x86 executable file)
     path -> location of executables
+    copy_files -> copy pe files to benign dir
 '''
-def benign_creation(path):
+def benign_creation(path, copy_files):
     paths = []
+    benign_path = ""
+
+    if copy_files:
+        benign_path = os.path.join(os.getcwd(), "benign")
+        os.mkdir(benign_path)
 
     for dirpath, dirs, files in os.walk(path):
         for filename in files:
@@ -48,6 +56,10 @@ def benign_creation(path):
                 if check_pe(fname):
                     print("Found: " + fname)
                     paths.append(fname)
+
+                    if(copy_files):
+                        shutil.copy2(fname, benign_path)
+
 
     with open("benign_labels.csv", 'w') as f:
         for file in paths:
@@ -112,7 +124,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.benign:
-        benign_creation(args.path)
+        benign_creation(args.path, args.copy_files)
 
     if args.malware:
         signatures = peutils.SignatureDatabase("packers.txt")
